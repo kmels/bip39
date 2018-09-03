@@ -220,8 +220,11 @@
                         <li id="bip32-tab">
                             <a href="#bip32" role="tab" data-toggle="tab">BIP32</a>
                         </li>
-                        <li id="bip44-tab" class="active">
+                        <li id="bip44-tab">
                             <a href="#bip44" role="tab" data-toggle="tab">BIP44</a>
+                        </li>
+			            <li id="bip47-tab" class="active">
+                            <a href="#bip47" role="tab" data-toggle="tab">BIP47</a>
                         </li>
                         <li id="bip49-tab">
                             <a href="#bip49" role="tab" data-toggle="tab">BIP49</a>
@@ -314,6 +317,114 @@
                                 </div>
                             </form>
                         </div>
+
+
+			            <div id="bip47" class="tab-pane active">
+                            <form class="form-horizontal" role="form">
+                                <br>
+                                <div class="col-sm-2"></div>
+                                <div class="col-sm-10">
+                                    <p>
+                                        For more info see the
+                                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0047.mediawiki" target="_blank">BIP47 spec</a>.
+                                    </p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="purpose" class="col-sm-2 control-label">
+                                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0047.mediawiki#purpose" target="_blank">Purpose</a>
+                                    </label>
+                                    <div class="col-sm-10">
+                                        <input id="purpose" type="text" class="purpose form-control" value="47" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="coin" class="col-sm-2 control-label">
+                                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0047.mediawiki#registered-coin-types" target="_blank">Coin</a>
+                                    </label>
+                                    <div class="col-sm-10">
+                                        <input id="coin" type="text" class="coin form-control" value="0" readonly>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="account" class="col-sm-2 control-label">
+                                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0047.mediawiki#account" target="_blank">Account</a>
+                                    </label>
+                                    <div class="col-sm-10">
+                                        <input id="account" type="text" class="account form-control" value="0">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="change" class="col-sm-2 control-label">
+                                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0047.mediawiki#change" target="_blank">External / Internal</a>
+                                    </label>
+                                    <div class="col-sm-10">
+                                        <input id="change" type="text" class="change form-control" value="0">
+                                    </div>
+                                </div>
+				<div class="form-group">
+                                    <label for="change" class="col-sm-2 control-label">
+                                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0047.mediawiki#change" target="_blank">Payment code</a>
+                                    </label>
+                                    <div class="col-sm-10">
+                                        <input id="local-paycode" type="text" class="paymentcode form-control" value="" readonly>
+                                    </div>
+                                </div>
+				<div class="form-group">
+                                    <label for="change" class="col-sm-2 control-label">
+                                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0047.mediawiki#change" target="_blank">Notification address</a>
+                                    </label>
+                                    <div class="col-sm-10">
+                                        <input id="notification-address" type="text" class="paymentcode form-control" value="" readonly>
+                                    </div>
+                                </div>
+				<div class="form-group">
+                                    <label for="change" class="col-sm-2 control-label">
+                                        <a href="https://github.com/bitcoin/bips/blob/master/bip-0047.mediawiki#change" target="_blank">Remote paycode</a>
+                                    </label>
+                                    <div class="col-sm-10">
+                                        <input id="remote-paycode" type="text" class="paymentcode form-control" value="PM8TJTLJbPRGxSbc8EJi42Wrr6QbNSaSSVJ5Y3E4pbCYiTHUskHg13935Ubb7q8tx9GVbh2UuRnBc3WSyJHhUrw8KhprKnn9eDznYGieTzFcwQRya4GA">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">
+                                    </label>
+                                    <div class="col-sm-10">
+                                        <p>The account extended keys can be used for importing to most BIP47 compatible wallets, such as mycelium or electrum.</p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="account-xprv" class="col-sm-2 control-label">
+                                        <span>Account Extended Private Key</span>
+                                    </label>
+                                    <div class="col-sm-10">
+                                        <textarea id="account-xprv" type="text" class="account-xprv private-data form-control" readonly data-show-qr></textarea>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="account-xpub" class="col-sm-2 control-label">
+                                        <span>Account Extended Public Key</span>
+                                    </label>
+                                    <div class="col-sm-10">
+                                        <textarea id="account-xpub" type="text" class="account-xpub form-control" readonly data-show-qr></textarea>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">
+                                    </label>
+                                    <div class="col-sm-10">
+                                        <p>The BIP32 derivation path and extended keys are the basis for the derived addresses.</p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="bip47-path" class="col-sm-2 control-label">BIP32 Derivation Path</label>
+                                    <div class="col-sm-10">
+                                        <input id="bip47-path" type="text" class="path form-control" value="m/47'/0'/0'/0" readonly="readonly">
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+
                         <div id="bip32" class="tab-pane">
                             <form class="form-horizontal" role="form">
                                 <br>
@@ -624,7 +735,7 @@
 
             <div class="row">
                 <div class="col-md-12">
-                    <h2>Derived Addresses</h2>
+                    <h2 id="local-addreses-headtext">Derived Addresses</h2>
                     <p>Note these addresses are derived from the BIP32 Extended Key</p>
                 </div>
                 <div class="col-md-12 bch-addr-type-container hidden">
@@ -719,6 +830,106 @@
             <input type="number" class="more-rows-start-index">
             <span>(leave blank to generate from next index)</span>
 
+            <hr>
+
+            <div id="bip47-remote-addresses" class="hidden">
+                <div class="row">
+                    <div class="col-md-12">
+                        <h2 id="remote-addreses-headtext">Send Addresses</h2>
+                        <p>Note these addresses are derived from the BIP47 remote payment code.</p>
+                    </div>
+                    <div class="col-md-12 bch-addr-type-container hidden">
+                        <div class="radio">
+                            <label>
+                                <input type="radio" value="cashaddr" name="bch-addr-type" class="use-bch-cashaddr-addresses" checked="checked">
+                                <span>Use CashAddr addresses for Bitcoin Cash (ie starting with 'q' instead of '1')</span>
+                            </label>
+                        </div>
+                        <div class="radio">
+                            <label>
+                                <input type="radio" value="bitpay" name="bch-addr-type" class="use-bch-bitpay-addresses">
+                                <span>Use BitPay-style addresses for Bitcoin Cash (ie starting with 'C' instead of '1')</span>
+                            </label>
+                        </div>
+                        <div class="radio">
+                            <label>
+                                <input type="radio" value="legacy" name="bch-addr-type" class="use-bch-legacy-addresses">
+                                <span>Use legacy addresses for Bitcoin Cash (ie starting with '1')</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="checkbox">
+                            <label>
+                                <input type="checkbox" class="use-bip38">
+                                <span>Encrypt private keys using BIP38 and this password:</span>
+                            </label>
+                            <input class="bip38-password private-data">
+                            <span>Enabling BIP38 means each key will take several minutes to generate.</span>
+                        </div>
+                    </div>
+                    <ul class="addresses-type nav nav-tabs" role="tablist">
+                        <li id="table-tab" class=" active">
+                            <a href="#table" role="tab" data-toggle="tab">Table</a>
+                        </li>
+                        <li id="csv-tab">
+                            <a href="#csv" role="tab" data-toggle="tab">CSV</a>
+                        </li>
+                    </ul>
+                    <div class="addresses-type tab-content">
+                        <div id="table" class="tab-pane active">
+                            <div class="col-md-12">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <th>
+                                            <div class="input-group">
+                                                <span>Path</span>&nbsp;&nbsp;
+                                                <button class="index-toggle">Toggle</button>
+                                            </div>
+                                        </th>
+                                        <th>
+                                            <div class="input-group">
+                                                <span>Address</span>&nbsp;&nbsp;
+                                                <button class="address-toggle">Toggle</button>
+                                            </div>
+                                        </th>
+                                        <th>
+                                            <div class="input-group">
+                                                <span>Public Key</span>&nbsp;&nbsp;
+                                                <button class="public-key-toggle">Toggle</button>
+                                            </div>
+                                        </th>
+                                        <th>
+                                            <div class="input-group">
+                                                <span>Private Key</span>&nbsp;&nbsp;
+                                                <button class="private-key-toggle">Toggle</button>
+                                            </div>
+                                        </th>
+                                    </thead>
+                                    <tbody class="addresses monospace">
+                                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="csv" class="tab-pane">
+                            <div class="col-md-12">
+                                <textarea class="csv form-control" rows="25" readonly></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <span>Show</span>
+                <input type="number" class="rows-to-add" value="20">
+                <button class="more">more rows</button>
+                <span>starting from index</span>
+                <input type="number" class="more-rows-start-index">
+                <span>(leave blank to generate from next index)</span>
+            </div>
             <hr>
 
             <div class="row">

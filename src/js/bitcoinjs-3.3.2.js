@@ -8596,13 +8596,13 @@ module.exports={
   "OP_CHECKMULTISIGVERIFY": 175,
 
   "OP_NOP1": 176,
-  
+
   "OP_NOP2": 177,
   "OP_CHECKLOCKTIMEVERIFY": 177,
 
   "OP_NOP3": 178,
   "OP_CHECKSEQUENCEVERIFY": 178,
-  
+
   "OP_NOP4": 179,
   "OP_NOP5": 180,
   "OP_NOP6": 181,
@@ -9219,6 +9219,92 @@ Object.defineProperty(ECPair.prototype, 'Q', {
   }
 })
 
+// Given ECPair is an extended root (local):
+// key payment code (remote), that will make an indexed deposit
+// Returns the "deposit key", used to generate a look ahead of deposit addresses by wallets.
+
+ECPair.makeBip47ReceiveKey= function(accountKey, remotePubkey, index, options) {
+  var leafKey = accountKey.derive(index);
+  if (!leafKey.keyPair.d) throw new Error('Missing private key')
+
+  // a = localPaycode( acc key, index)
+  var a = leafKey.keyPair.d;
+
+  options = options || {}
+
+  // Derive an extended (public) key for future ECDH, associated
+  // with a particular identity/account/index (non hardened)
+  // B = RemotePaycode(remote, 0)
+  var B = remotePubkey.derive(0).keyPair.Q;
+  B.curve.validate(B);
+
+  // S = secretPoint(a, B)
+  var S = B.multiply(a);
+
+  // Grab the x component (32 bytes) of the secret
+  var Sx = BigInteger.fromBuffer(S.getEncoded(S.compresed).slice(1,33))
+
+  // s = HashSecret(Sx)
+  var s = BigInteger.fromBuffer(bcrypto.sha256(Sx.toBuffer()))
+
+  // A = sG + aG
+  var sG = secp256k1.G.multiply(s);
+  console.log(sG.toHex())
+  sG.curve.validate(sG);
+
+  var aG = secp256k1.G.multiply(a);
+  aG.curve.validate(aG)
+  var A = sG.add(aG);
+  A.curve.validate(A);
+
+  // receive key = A'
+  var A_ = new ECPair(null, A, {
+    compressed: A.compressed,
+    network: options.network || NETWORKS.bitcoin
+  })
+
+  return A_;
+}
+
+ECPair.makeBip47SendKey= function(accountKey, remotePubkey, index, options) {
+  var leafKey = accountKey.derive(0);
+  if (!leafKey.keyPair.d) throw new Error('Missing private key')
+
+  // a = localPaycode( acc key, 0)
+  var a = leafKey.keyPair.d;
+
+  options = options || {}
+
+  // Derive an extended (public) key for future ECDH, associated
+  // with a particular identity/account/index (non hardened)
+  // B = RemotePaycode(remote, index)
+  var B = remotePubkey.derive(index).keyPair.Q;
+  B.curve.validate(B);
+
+  // S = secretPoint(a, B)
+  var S = B.multiply(a);
+
+  // Grab the x component (32 bytes) of the secret
+  var Sx = BigInteger.fromBuffer(S.getEncoded(S.compresed).slice(1,33))
+
+  // s = HashSecret(Sx)
+  var s = BigInteger.fromBuffer(bcrypto.sha256(Sx.toBuffer()))
+
+  // sG
+  var sG = secp256k1.G.multiply(s);
+  console.log(sG.toHex())
+  sG.curve.validate(sG);
+
+  // B'= sG + B
+  var B_ = sG.add(B);
+  
+  // send key = B'
+  return new ECPair(null, B_, {
+    compressed: B_.compressed,
+    network: options.network || NETWORKS.bitcoin
+  })
+}
+
 ECPair.fromPublicKeyBuffer = function (buffer, network) {
   var Q = ecurve.Point.decodeFrom(secp256k1, buffer)
 
@@ -9407,13 +9493,13 @@ var Buffer = require('safe-buffer').Buffer
 var base58check = require('bs58check')
 var bcrypto = require('./crypto')
 var createHmac = require('create-hmac')
+var createHash = require('create-hash')
 var typeforce = require('typeforce')
 var types = require('./types')
 var NETWORKS = require('./networks')
 
 var BigInteger = require('bigi')
 var ECPair = require('./ecpair')
-
 var ecurve = require('ecurve')
 var curve = ecurve.getCurveByName('secp256k1')
 
@@ -9527,10 +9613,46 @@ HDNode.fromBase58 = function (string, networks) {
   return hd
 }
 
+// Build public HD master from payment code
+HDNode.masterFromPaymentCode = function (string, networks) {
+  var buffer = base58check.decode(string)
+  if (buffer.length !== 81) throw new Error('Invalid buffer length')
+
+  if (buffer[0] != 0x47) throw new Error('Invalid payment code')
+
+  // Byte 0: version (required value: 0x01)
+  console.log("Version: ")
+  console.log(buffer[1])
+
+  // 32 bytes: the x value, must be a member of the secp256k1 group
+  var pubkey = buffer.slice(3, 36)
+
+  // 32 bytes: the chain code
+  var chainCode = buffer.slice(36, 68)
+  if (chainCode.length !== 32) throw new Error('Invalid chainCode length')
+
+  var Q = ecurve.Point.decodeFrom(curve, pubkey)
+  curve.validate(Q)
+
+  var keyPair = new ECPair(null, Q)
+  curve.validate(keyPair.Q)
+
+  var depth = 0
+  var parentFingerprint = 0x00000000;
+
+  var hd = new HDNode(keyPair, chainCode)
+  curve.validate(hd.keyPair.Q)
+
+  hd.depth = 0
+  hd.index = 0
+  hd.parentFingerprint = parentFingerprint
+
+  return hd
+}
+
 HDNode.prototype.getAddress = function () {
   return this.keyPair.getAddress()
 }
-
 HDNode.prototype.getIdentifier = function () {
   return bcrypto.hash160(this.keyPair.getPublicKeyBuffer())
 }
@@ -9605,6 +9727,20 @@ HDNode.prototype.toBase58 = function (__isPrivate) {
   }
 
   return base58check.encode(buffer)
+}
+
+// Derive payment code from master HD key at m'/47'/1'/0'
+HDNode.prototype.toPaymentCode = function() {
+    var buffer = Buffer.allocUnsafe(81)
+    buffer.fill(0)
+
+    buffer[0] = 0x47;
+    buffer[1] = 0x01;
+    buffer[2] = 0x00;
+
+    this.keyPair.getPublicKeyBuffer().copy(buffer, 3) // 3 - 35 inclusive
+    this.chainCode.copy(buffer, 36)  // 35 - 67 inclusive
+    return base58check.encode(buffer)
 }
 
 // https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#child-key-derivation-ckd-functions
@@ -9688,6 +9824,18 @@ HDNode.prototype.deriveHardened = function (index) {
   return this.derive(index + HDNode.HIGHEST_BIT)
 }
 
+// Takes a counterparty payment code, an index (# of payment)
+// Returns the "send key" that is used to calculate a blockchain formatted address
+HDNode.prototype.deriveBip47Sendkey = function(remotePaycode, index) {
+
+  // a = localPaycode(acc, 0)
+  // B = remotePaycode(remote, index)
+  // Sx = SecretPoint(a,B)
+  // s = HashSecret(Sx)
+  // B' = sG + B
+  // send key = B'
+}
+
 // Private === not neutered
 // Public === neutered
 HDNode.prototype.isNeutered = function () {
@@ -9720,7 +9868,7 @@ HDNode.prototype.derivePath = function (path) {
 
 module.exports = HDNode
 
-},{"./crypto":47,"./ecpair":49,"./networks":53,"./types":80,"bigi":39,"bs58check":83,"create-hmac":88,"ecurve":92,"safe-buffer":101,"typeforce":112}],52:[function(require,module,exports){
+},{"./crypto":47,"./ecpair":49,"./networks":53,"./types":80,"bigi":39,"bs58check":83,"create-hash":85,"create-hmac":88,"ecurve":92,"safe-buffer":101,"typeforce":112}],52:[function(require,module,exports){
 var script = require('./script')
 
 var templates = require('./templates')
@@ -13120,6 +13268,11 @@ Point.prototype.getEncoded = function (compressed) {
   return buffer
 }
 
+Point.prototype.toHex = function() {
+  return this.getEncoded(this.compressed).toJSON()['data'].reduce((output, elem) =>
+  (output + ('0' + elem.toString(16)).slice(-2)),
+  '');;
+}
 Point.decodeFrom = function (curve, buffer) {
   var type = buffer.readUInt8(0)
   var compressed = (type !== 4)
@@ -13130,7 +13283,7 @@ Point.decodeFrom = function (curve, buffer) {
   var Q
   if (compressed) {
     assert.equal(buffer.length, byteLength + 1, 'Invalid sequence length')
-    assert(type === 0x02 || type === 0x03, 'Invalid sequence tag')
+    assert(type === 0x02 || type === 0x03, 'Invalid sequence tag: ')
 
     var isOdd = (type === 0x03)
     Q = curve.pointFromX(isOdd, x)

@@ -6,6 +6,8 @@
     var seed = null;
     var bip32RootKey = null;
     var bip32ExtendedKey = null;
+    var bip47AccountKey = null;
+    var bip47RemoteKey = null;
     var network = bitcoinjs.bitcoin.networks.bitcoin;
     var addressRowTemplate = $("#address-row-template");
 
@@ -23,6 +25,7 @@
     var generationProcesses = [];
 
     var DOM = {};
+    DOM.derivedAddressesHeadText = $("#local-addreses-headtext")
     DOM.privacyScreenToggle = $(".privacy-screen-toggle");
     DOM.network = $(".network");
     DOM.bip32Client = $("#bip32-client");
@@ -55,11 +58,13 @@
     DOM.extendedPubKey = $(".extended-pub-key");
     DOM.bip32tab = $("#bip32-tab");
     DOM.bip44tab = $("#bip44-tab");
+    DOM.bip47tab = $("#bip47-tab");
     DOM.bip49tab = $("#bip49-tab");
     DOM.bip84tab = $("#bip84-tab");
     DOM.bip141tab = $("#bip141-tab");
     DOM.bip32panel = $("#bip32");
     DOM.bip44panel = $("#bip44");
+    DOM.bip47panel = $("#bip47");
     DOM.bip49panel = $("#bip49");
     DOM.bip32path = $("#bip32-path");
     DOM.bip44path = $("#bip44-path");
@@ -69,6 +74,17 @@
     DOM.bip44accountXprv = $("#bip44 .account-xprv");
     DOM.bip44accountXpub = $("#bip44 .account-xpub");
     DOM.bip44change = $("#bip44 .change");
+    DOM.bip47path = $("#bip47-path");
+    DOM.bip47purpose = $("#bip47 .purpose");
+    DOM.bip47coin = $("#bip47 .coin");
+    DOM.bip47account = $("#bip47 .account");
+    DOM.bip47accountXprv = $("#bip47 .account-xprv");
+    DOM.bip47accountXpub = $("#bip47 .account-xpub");
+    DOM.bip47change = $("#bip47 .change");
+    DOM.bip47localpaycode = $("#bip47 #local-paycode");
+    DOM.bip47notificationaddress = $("#bip47 #notification-address");
+    DOM.bip47remotepaycode = $("#bip47 #remote-paycode");
+    DOM.bip47remoteaddresses = $("#bip47-remote-addresses")
     DOM.bip49unavailable = $("#bip49 .unavailable");
     DOM.bip49available = $("#bip49 .available");
     DOM.bip49path = $("#bip49-path");
@@ -99,6 +115,7 @@
     DOM.useBip38 = $(".use-bip38");
     DOM.bip38Password = $(".bip38-password");
     DOM.addresses = $(".addresses");
+    DOM.remoteaddresses = $(".remote-addresses");
     DOM.csvTab = $("#csv-tab a");
     DOM.csv = $(".csv");
     DOM.rowsToAdd = $(".rows-to-add");
@@ -135,6 +152,9 @@
         DOM.bip32path.on("input", calcForDerivationPath);
         DOM.bip44account.on("input", calcForDerivationPath);
         DOM.bip44change.on("input", calcForDerivationPath);
+        DOM.bip47account.on("input", calcForDerivationPath);
+        DOM.bip47change.on("input", calcForDerivationPath);
+	    DOM.bip47remotepaycode.on("input", calcForDerivationPath);
         DOM.bip49account.on("input", calcForDerivationPath);
         DOM.bip49change.on("input", calcForDerivationPath);
         DOM.bip84account.on("input", calcForDerivationPath);
@@ -386,7 +406,12 @@
         if (bip44TabSelected()) {
             displayBip44Info();
         }
-        else if (bip49TabSelected()) {
+	    if (bip47TabSelected()) {
+            displayBip47Info();
+        } else {
+            DOM.bip47remoteaddresses.addClass('hidden')
+        }
+        if (bip49TabSelected()) {
             displayBip49Info();
         }
         else if (bip84TabSelected()) {
@@ -648,7 +673,24 @@
             path += change;
             DOM.bip44path.val(path);
             var derivationPath = DOM.bip44path.val();
-            console.log("Using derivation path from BIP44 tab: " + derivationPath);
+            return derivationPath;
+        }
+	    else if (bip47TabSelected()) {
+            var purpose = parseIntNoNaN(DOM.bip47purpose.val(), 47);
+            var coin = parseIntNoNaN(DOM.bip47coin.val(), 0);
+            var account = parseIntNoNaN(DOM.bip47account.val(), 0);
+            var change = parseIntNoNaN(DOM.bip47change.val(), 0);
+            var path = "m/";
+            path += purpose + "'/";
+            path += coin + "'/";
+            path += account + "'/";
+            path += change;
+            DOM.bip47path.val(path);
+            var derivationPath = DOM.bip47path.val();
+            
+            if (DOM.bip47remotepaycode.val().length > 79) {
+                DOM.bip47remoteaddresses.removeClass("hidden");
+            }
             return derivationPath;
         }
         else if (bip49TabSelected()) {
@@ -763,6 +805,39 @@
         DOM.bip44accountXpub.val(accountXpub);
     }
 
+    function displayBip47Info() {
+        // Get the derivation path for the account,
+        // m/47'/0'/0'
+        var purpose = parseIntNoNaN(DOM.bip47purpose.val(), 47);
+        var coin = parseIntNoNaN(DOM.bip47coin.val(), 0);
+        var account = parseIntNoNaN(DOM.bip47account.val(), 0);
+        var path = "m/";
+        path += purpose + "'/";
+        path += coin + "'/";
+        path += account + "'/";
+        // Calculate the account extended keys
+        bip47AccountKey = calcBip32ExtendedKey(path);
+        var accountXprv = bip47AccountKey.toBase58();
+        var accountXpub = bip47AccountKey.neutered().toBase58();
+        // Display the extended keys
+        DOM.bip47accountXprv.val(accountXprv);
+        DOM.bip47accountXpub.val(accountXpub);
+        // Derive and display payment code
+        var paymentCode = bip47AccountKey.toPaymentCode();
+        DOM.bip47localpaycode.val(paymentCode);
+        // Local notification address
+        var notificationKey = bip47AccountKey.derive(0);
+        var notificationAddress = notificationKey.keyPair.getAddress().toString();
+        DOM.bip47notificationaddress.val(notificationAddress);
+
+        // using remote payment code, calculate deposit and send keys 
+        var remotePaycode = DOM.bip47remotepaycode.val();
+        if (remotePaycode.length > 79) {
+            DOM.derivedAddressesHeadText = "Deposit Addresses"
+            bip47RemoteKey = bitcoinjs.bitcoin.HDNode.masterFromPaymentCode(remotePaycode);
+        }
+    }
+
     function displayBip49Info() {
         // Get the derivation path for the account
         var purpose = parseIntNoNaN(DOM.bip49purpose.val(), 49);
@@ -858,6 +933,7 @@
         var self = this;
         this.shouldGenerate = true;
         var useHardenedAddresses = DOM.hardenedAddresses.prop("checked");
+        var useBip47RemotePaykey = DOM.bip47remotepaycode.val().length > 79;
         var useBip38 = DOM.useBip38.prop("checked");
         var bip38password = DOM.bip38Password.val();
         var isSegwit = segwitSelected();
@@ -892,10 +968,14 @@
                 // get address
                 var address = keyPair.getAddress().toString();
                 // get privkey
-                var hasPrivkey = !key.isNeutered();
+                var hasPrivkey = keyPair.d;
                 var privkey = "NA";
                 if (hasPrivkey) {
-                    privkey = keyPair.toWIF();
+                    if (useBip47RemotePaykey)
+                        privkey = keyPair.toWIF();
+                    else
+                        privkey = keyPair.d;
+
                     // BIP38 encode private key if required
                     if (useBip38) {
                         privkey = bitcoinjsBip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
@@ -936,7 +1016,7 @@
                     }
                 }
                 // Segwit addresses are different
-                if (isSegwit) {
+                if (isSegwit && !useBip47RemotePaykey) {
                     if (!segwitAvailable) {
                         return;
                     }
@@ -953,7 +1033,19 @@
                         address = bitcoinjs.bitcoin.address.fromOutputScript(scriptpubkey, network)
                     }
                 }
-                addAddressToList(indexText, address, pubkey, privkey);
+
+                if (useBip47RemotePaykey) {
+                    var receiveKeyPair = bitcoinjs.bitcoin.ECPair.makeBip47ReceiveKey(bip47AccountKey, bip47RemoteKey, index);
+                    address = receiveKeyPair.getAddress().toString();
+                    addAccountAddressToList(indexText, address, pubkey, privkey, DOM.addresses);
+                    
+                    var sendKeyPair = bitcoinjs.bitcoin.ECPair.makeBip47SendKey(bip47AccountKey, bip47RemoteKey, index);
+                    var remoteAddress = sendKeyPair.getAddress().toString();
+                    addAccountAddressToList(indexText, remoteAddress, pubkey, privkey, DOM.remoteaddresses);
+                } else {
+                    addAccountAddressToList(indexText, address, pubkey, privkey, DOM.addresses);
+                }
+
                 if (isLast) {
                     hidePending();
                     updateCsv();
@@ -996,6 +1088,7 @@
     }
 
     function clearAddressesList() {
+        DOM.derivedAddressesHeadText = "Derived Addresses"
         DOM.addresses.empty();
         DOM.csv.val("");
         stopGenerating();
@@ -1022,9 +1115,11 @@
         DOM.extendedPubKey.val("");
         DOM.bip44accountXprv.val("");
         DOM.bip44accountXpub.val("");
+	DOM.bip47accountXprv.val("");
+        DOM.bip47accountXpub.val("");
     }
 
-    function addAddressToList(indexText, address, pubkey, privkey) {
+    function addAccountAddressToList(indexText, address, pubkey, privkey, table) {
         var row = $(addressRowTemplate.html());
         // Elements
         var indexCell = row.find(".index span");
@@ -1049,7 +1144,7 @@
         if (!showPrivKey) {
             privkeyCell.addClass("invisible");
         }
-        DOM.addresses.append(row);
+        table.append(row);
         var rowShowQrEls = row.find("[data-show-qr]");
         setQrEvents(rowShowQrEls);
     }
@@ -1460,6 +1555,10 @@
         return DOM.bip44tab.hasClass("active");
     }
 
+    function bip47TabSelected() {
+        return DOM.bip47tab.hasClass("active");
+    }
+
     function bip32TabSelected() {
         return DOM.bip32tab.hasClass("active");
     }
@@ -1495,6 +1594,7 @@
 
     function setHdCoin(coinValue) {
         DOM.bip44coin.val(coinValue);
+	DOM.bip47coin.val(coinValue);
         DOM.bip49coin.val(coinValue);
         DOM.bip84coin.val(coinValue);
     }
